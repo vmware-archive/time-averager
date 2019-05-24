@@ -1,0 +1,78 @@
+
+= Time Averager Example
+
+This repository contains a sample streaming function that can be used with the riff streaming POC.
+It is simple enough to be usable as both a request/reply sample and a stateful streaming sample.
+
+
+== Prerequisites
+These samples assume you have the latest https://github.com/ericbottard/system/tree/streaming[patched riff system],
+https://github.com/projectriff/riff/tree/reset[riff CLI reset branch],
+liiklus running and exposed as a k8s service,
+as well as a configured https://github.com/projectriff/kafka-gateway[kafka provider]
+and have modified the function builder
+to use `ericbottard/builder:streaming-grpc`.
+
+== Compile the Function
+[source]
+----
+riff function create time-averager \
+	--git-repo https://github.com/projectriff-samples/time-averager.git \
+	--handler com.acme.TimeAverager \
+	--image $KO_DOCKER_REPO/time-averager
+----
+
+== Use as Request/Reply
+
+Create a handler for the function:
+[source]
+----
+riff handler create time-averager --function-ref time-averager
+----
+
+Invoke it a couple of times. The average of a single number is the number itself:
+[source]
+----
+riff handler invoke time-averager --text -- -d 48 -H 'Accept: application/json' -w '\n'
+
+48.0
+
+riff handler invoke time-averager --text -- -d 50 -H 'Accept: application/json' -w '\n'
+
+50.0
+----
+
+== Use as a Streaming Sample
+
+Create two streams
+[source]
+----
+riff stream create --provider kafka-provider numbers
+riff stream create --provider kafka-provider avgs
+----
+
+Create a streaming processor for the function:
+[source]
+----
+riff processor create time-averager --function-ref time-averager --input numbers --output avgs
+----
+
+Using the riff https://github.com/projectriff-samples/liiklus-client[liiklus-client], 
+in two separate terminals:
+
+
+Setup a consumer:
+[source, bash]
+----
+java -jar target/liiklus-client-1.0.0-SNAPSHOT.jar --consumer my.liiklus.host:6565 avgs
+----
+
+Setup a producer:
+[source, bash]
+----
+java -jar target/liiklus-client-1.0.0-SNAPSHOT.jar --producer my.liiklus.host:6565 numbers
+----
+
+Then, in the producer window, and in rather quick succession, enter numbers and hit [ENTER].
+
+
