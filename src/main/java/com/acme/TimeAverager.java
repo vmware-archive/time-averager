@@ -17,6 +17,6 @@ public class TimeAverager implements Function<Flux<Float>, Flux<Float>> {
 
 	@Override
 	public Flux<Float> apply(Flux<Float> floatFlux) {
-		return floatFlux.window(Duration.ofSeconds(5)).flatMap(MathFlux::averageFloat);
+		return floatFlux.window(Duration.ofSeconds(10)).flatMap(MathFlux::averageFloat);
 	}
 }
